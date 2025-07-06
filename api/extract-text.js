@@ -23,8 +23,18 @@ export default async function handler(req, res) {
         // Use environment variable for API key
         const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
         
+        // Debug logging (remove in production)
+        console.log('Environment check:', {
+            hasApiKey: !!OPENAI_API_KEY,
+            keyLength: OPENAI_API_KEY ? OPENAI_API_KEY.length : 0,
+            keyPrefix: OPENAI_API_KEY ? OPENAI_API_KEY.substring(0, 7) + '...' : 'none'
+        });
+        
         if (!OPENAI_API_KEY) {
-            return res.status(500).json({ error: 'OpenAI API key not configured' });
+            return res.status(500).json({ 
+                error: 'OpenAI API key not configured',
+                debug: `Environment variables available: ${Object.keys(process.env).length}`
+            });
         }
 
         const prompt = `You are analyzing a class schedule or calendar image. Pay close attention to the visual formatting and layout:
@@ -102,6 +112,6 @@ Look carefully at the visual hierarchy - course names are typically more promine
         res.status(200).json(eventDetails);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ error: 'Failed to extract event details from image' });
+        res.status(500).json({ error: 'Failed to extract event details from image', details: error.message });
     }
 } 
