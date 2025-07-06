@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image to Google Calendar (AI-Powered)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,6 +15,59 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        
+        /* Dark mode variables */
+        :root {
+            --bg-primary: #f3f4f6;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f9fafb;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border-color: #e5e7eb;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-tertiary: #374151;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --text-tertiary: #9ca3af;
+            --border-color: #4b5563;
+        }
+        
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Themed utility classes */
+        .bg-themed-secondary {
+            background-color: var(--bg-secondary);
+        }
+        
+        .bg-themed-tertiary {
+            background-color: var(--bg-tertiary);
+        }
+        
+        .text-themed-primary {
+            color: var(--text-primary);
+        }
+        
+        .text-themed-secondary {
+            color: var(--text-secondary);
+        }
+        
+        .text-themed-tertiary {
+            color: var(--text-tertiary);
+        }
+        
+        .border-themed {
+            border-color: var(--border-color);
+        }
+        
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             width: 36px;
@@ -34,75 +86,135 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="text-gray-800">
     <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-2xl">
         <header class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Image to Google Calendar</h1>
-            <p class="text-md sm:text-lg text-gray-600 mt-2">Upload an image, and AI will create a calendar event for you.</p>
-            <p class="text-sm text-gray-500 mt-3 max-w-md mx-auto">
-                📅 Sign in with your Google account to add events to your own calendar<br>
-                🔒 Your images and data are processed securely and not stored
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1"></div>
+                <div class="flex-1 text-center">
+                    <h1 class="text-3xl sm:text-4xl font-bold text-themed-primary">Image to Google Calendar</h1>
+                </div>
+                <div class="flex-1 flex justify-end">
+                    <button id="theme-toggle" class="p-2 rounded-lg bg-themed-secondary border-themed border transition-colors hover:bg-themed-tertiary">
+                        <span id="theme-icon">🌙</span>
+                    </button>
+                </div>
+            </div>
+            <p class="text-md sm:text-lg text-themed-secondary mt-2">Upload a class schedule or calendar image, and AI will create all your events automatically.</p>
+            <p class="text-sm text-themed-secondary mt-3 max-w-md mx-auto">
+                📅 Works with UCSB class schedules, weekly calendars, and single events<br>
+                🔄 Automatically creates recurring events for weekly classes<br>
+                🤖 Uses GPT-4o Vision to understand your schedule layout<br>
+                🏫 Validates UCSB courses and locations for accuracy<br>
+                🔒 Your images are processed securely and not stored
             </p>
         </header>
 
-        <main class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+        <main class="bg-themed-secondary p-6 sm:p-8 rounded-2xl shadow-lg border-themed border">
             <div class="flex justify-end mb-4">
                 <button id="authorize_button" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition-colors">Sign In with Google</button>
                 <button id="signout_button" class="hidden bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition-colors">Sign Out</button>
             </div>
 
             <div class="mb-6">
-                <label for="image-upload" class="block text-lg font-semibold mb-2 text-gray-700">1. Upload Image</label>
-                <input type="file" id="image-upload" accept="image/*" class="block w-full text-sm text-gray-500
+                <label for="image-upload" class="block text-lg font-semibold mb-2 text-themed-primary">1. Upload Class Schedule or Calendar Image</label>
+                <input type="file" id="image-upload" accept="image/*" class="block w-full text-sm text-themed-secondary
                     file:mr-4 file:py-2 file:px-4
                     file:rounded-full file:border-0
                     file:text-sm file:font-semibold
-                    file:bg-gray-50 file:text-gray-700
-                    hover:file:bg-gray-100
+                    file:bg-themed-tertiary file:text-themed-primary
+                    hover:file:bg-themed-secondary
                 "/>
             </div>
 
             <div id="image-preview-container" class="mb-6 hidden text-center">
-                <img id="image-preview" src="#" alt="Image preview" class="max-w-full h-auto mx-auto rounded-lg shadow-md"/>
+                <img id="image-preview" src="#" alt="Image preview" class="max-w-full h-auto mx-auto rounded-lg shadow-md border-themed border"/>
             </div>
 
             <div class="text-center mb-6">
                 <button id="extract-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                    2. Extract Event Info with AI
+                    2. Analyze Schedule with AI Vision
                 </button>
             </div>
             
-            <div id="status" class="text-center my-4 text-gray-600 font-medium hidden items-center justify-center">
+            <div id="status" class="text-center my-4 text-themed-secondary font-medium hidden items-center justify-center">
                 <div id="spinner" class="spinner mr-3 hidden"></div>
                 <span id="status-text"></span>
             </div>
 
             <div id="results" class="hidden">
                 <div class="mb-6">
-                    <h3 class="text-lg font-semibold mb-2 text-gray-700">AI Summary:</h3>
-                    <div id="extracted-text" class="p-4 bg-gray-50 rounded-lg border border-gray-200 whitespace-pre-wrap text-sm"></div>
+                    <h3 class="text-lg font-semibold mb-2 text-themed-primary">AI Analysis Results:</h3>
+                    <div id="extracted-text" class="p-4 bg-themed-tertiary rounded-lg border-themed border text-sm">
+                        <div id="events-container"></div>
+                    </div>
                 </div>
                 <div>
-                    <h3 class="text-lg font-semibold mb-2 text-gray-700">3. Add to Calendar</h3>
+                    <h3 class="text-lg font-semibold mb-2 text-themed-primary">3. Add to Calendar</h3>
+                    <div class="mb-4 p-4 bg-themed-tertiary rounded-lg border-themed border">
+                        <div class="flex items-center space-x-4 mb-3">
+                            <label class="text-sm font-medium text-themed-primary">Default Calendar Color:</label>
+                            <select id="default-color" class="px-3 py-1 border border-themed rounded text-sm bg-themed-secondary text-themed-primary">
+                                <option value="1">Lavender</option>
+                                <option value="2">Sage</option>
+                                <option value="3">Grape</option>
+                                <option value="4">Flamingo</option>
+                                <option value="5">Banana</option>
+                                <option value="6">Tangerine</option>
+                                <option value="7">Peacock</option>
+                                <option value="8">Graphite</option>
+                                <option value="9">Blueberry</option>
+                                <option value="10">Basil</option>
+                                <option value="11">Tomato</option>
+                            </select>
+                        </div>
+                        <div id="quarter-selector" class="flex items-center space-x-4 hidden">
+                            <label class="text-sm font-medium text-themed-primary">Default Quarter:</label>
+                            <select id="default-quarter" class="px-3 py-1 border border-themed rounded text-sm bg-themed-secondary text-themed-primary">
+                                <option value="winter2025">Winter 2025 (Jan - Mar)</option>
+                                <option value="spring2025">Spring 2025 (Apr - Jun)</option>
+                                <option value="summer2025">Summer 2025 (Jul - Sep)</option>
+                                <option value="fall2025">Fall 2025 (Oct - Dec)</option>
+                                <option value="winter2026">Winter 2026 (Jan - Mar)</option>
+                                <option value="spring2026">Spring 2026 (Apr - Jun)</option>
+                            </select>
+                        </div>
+                    </div>
                     <div id="calendar-actions-container" class="text-center">
-                        <button id="add-to-calendar-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-gray-400" disabled>Add to Google Calendar</button>
-                        <p id="calendar-status" class="text-sm mt-2 text-green-700 font-medium"></p>
+                        <button id="add-all-to-calendar-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-gray-400 mr-2" disabled>Add All to Google Calendar</button>
+                        <button id="add-selected-to-calendar-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-gray-400" disabled>Add Selected</button>
+                        <div id="calendar-status" class="text-sm mt-2 text-themed-primary font-medium"></div>
+                        <div id="calendar-links" class="mt-3 space-y-1 text-sm"></div>
                     </div>
                 </div>
             </div>
         </main>
 
-        <footer class="text-center mt-8 text-sm text-gray-500">
-            <p>Powered by Tesseract.js, OpenAI, and Google Calendar API</p>
-            <p class="mt-2">Sign in with your Google account to add events to your own calendar</p>
+        <footer class="text-center mt-8 text-sm text-themed-secondary">
+            <p>Powered by Google Calendar API</p>
+            <p class="mt-2">Perfect for class schedules, weekly calendars, and event planning</p>
             <p class="mt-1">Your data is processed securely and not stored on our servers</p>
+            <p class="mt-3">
+                <a href="/privacy-policy.html" class="text-blue-600 hover:text-blue-800 underline">Privacy Policy</a>
+            </p>
         </footer>
     </div>
 
     <script>
         // --- Configuration ---
-        // IMPORTANT: Only Google API key is needed in frontend
-        // OpenAI API key is now handled securely by serverless function
+        // IMPORTANT: Only Google API key is needed in frontend for production
+        // OpenAI API key is now handled securely by serverless function in production
+        
+        // FOR LOCAL DEVELOPMENT:
+        // 1. Replace "YOUR_OPENAI_API_KEY_HERE" with your actual OpenAI API key (around line 420)
+        // 2. Run: python3 -m http.server 8000
+        // 3. Visit: http://localhost:8000
+        // 4. The app will detect localhost and use direct OpenAI API calls
+        
+        // FOR PRODUCTION:
+        // - OpenAI API key should be set in Vercel environment variables
+        // - The app automatically uses serverless function /api/extract-text.js
+        // - No API keys are exposed in the frontend code
         
         // Get Google API key from: https://console.cloud.google.com/apis/credentials
         // Make sure to enable Google Calendar API and restrict the key to your domain
@@ -122,10 +234,17 @@
         const spinner = document.getElementById('spinner');
         const resultsDiv = document.getElementById('results');
         const extractedTextDiv = document.getElementById('extracted-text');
-        const addToCalendarBtn = document.getElementById('add-to-calendar-btn');
+        const eventsContainer = document.getElementById('events-container');
+        const addAllToCalendarBtn = document.getElementById('add-all-to-calendar-btn');
+        const addSelectedToCalendarBtn = document.getElementById('add-selected-to-calendar-btn');
         const calendarStatus = document.getElementById('calendar-status');
+        const calendarLinks = document.getElementById('calendar-links');
         const authorizeButton = document.getElementById('authorize_button');
         const signoutButton = document.getElementById('signout_button');
+        const defaultColorSelect = document.getElementById('default-color');
+        const defaultQuarterSelect = document.getElementById('default-quarter');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
 
         // --- State Variables ---
         let imageData = null;
@@ -134,15 +253,37 @@
         let gisInited = false;
         let latestEventDetails = null;
 
+        // --- Dark Mode Functions ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
         // --- Event Listeners ---
         authorizeButton.onclick = handleAuthClick;
         signoutButton.onclick = handleSignoutClick;
         imageUpload.addEventListener('change', handleImageUpload);
         extractBtn.addEventListener('click', handleExtractClick);
-        addToCalendarBtn.addEventListener('click', handleAddToCalendar);
+        addAllToCalendarBtn.addEventListener('click', () => handleAddToCalendar('all'));
+        addSelectedToCalendarBtn.addEventListener('click', () => handleAddToCalendar('selected'));
+        themeToggle.addEventListener('click', toggleTheme);
 
         // --- Initialization ---
         window.onload = () => {
+            initTheme();
             gapi.load('client', initializeGapiClient);
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: GOOGLE_CLIENT_ID,
@@ -193,11 +334,13 @@
             if (isSignedIn) {
                 authorizeButton.style.display = 'none';
                 signoutButton.style.display = 'block';
-                addToCalendarBtn.disabled = false;
+                addAllToCalendarBtn.disabled = false;
+                addSelectedToCalendarBtn.disabled = false;
             } else {
                 authorizeButton.style.display = 'block';
                 signoutButton.style.display = 'none';
-                addToCalendarBtn.disabled = true;
+                addAllToCalendarBtn.disabled = true;
+                addSelectedToCalendarBtn.disabled = true;
             }
         }
         
@@ -216,9 +359,13 @@
                     imagePreview.src = imageData;
                     imagePreviewContainer.classList.remove('hidden');
                     extractBtn.disabled = false;
+                    
+                    // Clear previous results
                     resultsDiv.classList.add('hidden');
                     calendarStatus.textContent = '';
-                    extractedTextDiv.textContent = '';
+                    calendarLinks.innerHTML = '';
+                    eventsContainer.innerHTML = '';
+                    latestEventDetails = null;
                 }
                 reader.readAsDataURL(file);
             }
@@ -229,20 +376,15 @@
             
             statusDiv.classList.remove('hidden');
             spinner.classList.remove('hidden');
-            statusText.textContent = 'Initializing OCR engine...';
+            statusText.textContent = 'Initializing AI Vision...';
             extractBtn.disabled = true;
             resultsDiv.classList.add('hidden');
 
             try {
-                const worker = await Tesseract.createWorker();
-                statusText.textContent = 'Recognizing text from image...';
-                const { data: { text } } = await worker.recognize(imageData);
-                await worker.terminate();
-
-                statusText.textContent = 'Asking AI to summarize event details...';
-                latestEventDetails = await getEventDetailsFromAI(text);
+                statusText.textContent = 'Analyzing image with AI Vision...';
+                latestEventDetails = await getEventDetailsFromAI(imageData);
                 
-                extractedTextDiv.textContent = JSON.stringify(latestEventDetails, null, 2);
+                displayEvents(latestEventDetails);
                 resultsDiv.classList.remove('hidden');
                 statusDiv.classList.add('hidden');
 
@@ -255,30 +397,315 @@
             }
         }
 
-        async function getEventDetailsFromAI(text) {
+        async function getEventDetailsFromAI(imageData) {
             try {
-                // Call our serverless function instead of OpenAI directly
-                const response = await fetch('/api/extract-text', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ text })
+                // Detect if running locally - make this bulletproof
+                const hostname = window.location.hostname;
+                const port = window.location.port;
+                const protocol = window.location.protocol;
+                
+                // Force local mode for localhost environments
+                const isLocal = hostname === 'localhost' || 
+                               hostname === '127.0.0.1' ||
+                               port === '8000' ||
+                               (protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1'));
+                
+                console.log('Environment detection:', {
+                    hostname: hostname,
+                    port: port,
+                    protocol: protocol,
+                    isLocal: isLocal,
+                    fullURL: window.location.href
                 });
+                
+                // Override: if we're on localhost:8000, definitely use local mode
+                const forceLocal = window.location.href.includes('localhost:8000') || 
+                                  window.location.href.includes('127.0.0.1:8000');
+                
+                if (isLocal || forceLocal) {
+                    // Local development - call OpenAI Vision API directly
+                    console.log('Using local OpenAI Vision API call (forced local mode)');
+                    const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"; // Replace with your actual API key for local development
+                    
+                    // Check if API key is properly configured
+                    if (OPENAI_API_KEY === "YOUR_OPENAI_API_KEY_HERE") {
+                        throw new Error("Please replace YOUR_OPENAI_API_KEY_HERE with your actual OpenAI API key for local development");
+                    }
+                    
+                    const prompt = `You are analyzing a class schedule or calendar image. Pay close attention to the visual formatting and layout:
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to extract event details');
+FOR UCSB CLASS SCHEDULES:
+- Course names/titles are usually in BOLD or larger text (e.g., "MATH 3B", "CHEM 1A", "ECON 10A")
+- Verify course codes match UCSB format: SUBJECT + NUMBER (e.g., CS 16, PHYS 1, HIST 4B)
+- Common UCSB subjects: MATH, CS, CHEM, PHYS, ECON, HIST, ENGL, PSTAT, MCDB, etc.
+- Location/room information appears directly below course title
+- UCSB locations include: Phelps Hall, Campbell Hall, Girvetz Hall, HSSB, Webb Hall, Broida Hall, etc.
+- Time information appears below location
+- Days shown as M, T, W, R, F (Mon, Tue, Wed, Thu, Fri)
+- DO NOT confuse location names with course titles
+
+FOR GENERAL EVENTS:
+- Event titles may be in various formats
+- Extract date, time, and location information
+
+VALIDATION REQUIREMENTS:
+- If claiming to be a UCSB course, verify the subject code exists at UCSB
+- If claiming to be a UCSB location, verify it's a real campus building/room
+- Mark uncertain extractions in the description field
+
+Analyze this image and provide a JSON object with:
+1. "isClassSchedule" (boolean) - true if this appears to be a class schedule with multiple recurring classes
+2. "events" array with each event having:
+   - "title" (the actual course name/event title, NOT the location)
+   - "date" (YYYY-MM-DD format)
+   - "startTime" (HH:MM, 24-hour format)
+   - "endTime" (HH:MM, 24-hour format or null)
+   - "location" (room/building name, NOT the course title)
+   - "description" (additional details like section number, instructor, validation notes)
+   - "recurring" (boolean - true for weekly classes, false for one-time events)
+   - "endDate" (YYYY-MM-DD format for when recurring classes end, typically end of quarter)
+   - "validated" (boolean - true if course/location appears to be valid UCSB data)
+
+If no specific dates are given, use reasonable dates for the current quarter. If it's a weekly class schedule, create events for each day mentioned.
+
+Look carefully at the visual hierarchy - course names are typically more prominent than locations and times.`;
+
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${OPENAI_API_KEY}`
+                        },
+                        body: JSON.stringify({
+                            model: "gpt-4o",
+                            messages: [
+                                {
+                                    role: "user",
+                                    content: [
+                                        { type: "text", text: prompt },
+                                        {
+                                            type: "image_url",
+                                            image_url: {
+                                                url: imageData
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            response_format: { type: "json_object" },
+                            max_tokens: 2000
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`OpenAI API error: ${errorData.error.message}`);
+                    }
+
+                    const data = await response.json();
+                    return JSON.parse(data.choices[0].message.content);
+                } else {
+                    // Production - use serverless function
+                    console.log('Using serverless function');
+                    const response = await fetch('/api/extract-text', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ imageData })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to extract event details');
+                    }
+
+                    return await response.json();
                 }
-
-                return await response.json();
             } catch (error) {
-                console.error('Error calling serverless function:', error);
+                console.error('Error in getEventDetailsFromAI:', error);
                 throw error;
             }
         }
 
-        async function handleAddToCalendar() {
+        function displayEvents(eventData) {
+            const events = eventData.events || [eventData]; // Handle both single event and multiple events
+            const isClassSchedule = eventData.isClassSchedule || false;
+            
+            // Show/hide quarter selector based on whether it's a class schedule
+            const quarterSelector = document.getElementById('quarter-selector');
+            if (quarterSelector) {
+                if (isClassSchedule) {
+                    quarterSelector.classList.remove('hidden');
+                } else {
+                    quarterSelector.classList.add('hidden');
+                }
+            }
+            
+            eventsContainer.innerHTML = '';
+            
+            if (events.length === 0) {
+                eventsContainer.innerHTML = '<p class="text-themed-secondary">No events found.</p>';
+                return;
+            }
+
+            // Display count and type
+            const countDiv = document.createElement('div');
+            countDiv.className = 'mb-4 text-sm text-themed-secondary font-medium';
+            const typeText = isClassSchedule ? 'class schedule' : 'event(s)';
+            countDiv.innerHTML = `Found ${events.length} ${typeText}:`;
+            eventsContainer.appendChild(countDiv);
+
+            events.forEach((event, index) => {
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'mb-4 p-4 border-themed border rounded-lg bg-themed-secondary shadow-sm';
+                
+                // Fix missing dates
+                const eventDate = event.date || getDefaultDate();
+                const eventEndDate = event.endDate || getDefaultEndDate();
+                
+                const recurringText = event.recurring ? 
+                    `<span class="text-sm text-blue-600 font-medium">🔄 Weekly recurring</span>` : 
+                    '<span class="text-sm text-themed-secondary">📅 One-time event</span>';
+                
+                // Show only UCSB validated indicator (remove warning)
+                const validationText = event.validated === true ? 
+                    '<span class="text-sm text-green-600 font-medium">✅ UCSB validated</span>' : '';
+                
+                eventDiv.innerHTML = `
+                    <div class="flex items-start space-x-3">
+                        <input type="checkbox" id="event-${index}" class="mt-1 h-4 w-4 text-blue-600 rounded border-themed focus:ring-blue-500" checked>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-semibold text-themed-primary">${event.title || 'Untitled Event'}</h4>
+                                <select id="color-${index}" class="ml-2 px-2 py-1 border-themed border rounded text-xs bg-themed-secondary text-themed-primary">
+                                    <option value="1">Lavender</option>
+                                    <option value="2">Sage</option>
+                                    <option value="3">Grape</option>
+                                    <option value="4">Flamingo</option>
+                                    <option value="5">Banana</option>
+                                    <option value="6">Tangerine</option>
+                                    <option value="7">Peacock</option>
+                                    <option value="8">Graphite</option>
+                                    <option value="9">Blueberry</option>
+                                    <option value="10">Basil</option>
+                                    <option value="11">Tomato</option>
+                                </select>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-themed-primary mb-1">Start Date</label>
+                                    <input type="date" id="startDate-${index}" value="${eventDate}" class="w-full px-2 py-1 border-themed border rounded text-sm bg-themed-secondary text-themed-primary">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-themed-primary mb-1">Time</label>
+                                    <div class="flex space-x-1">
+                                        <input type="time" id="startTime-${index}" value="${event.startTime || '09:00'}" class="flex-1 px-2 py-1 border-themed border rounded text-sm bg-themed-secondary text-themed-primary">
+                                        <span class="text-xs text-themed-secondary self-center">to</span>
+                                        <input type="time" id="endTime-${index}" value="${event.endTime || '10:00'}" class="flex-1 px-2 py-1 border-themed border rounded text-sm bg-themed-secondary text-themed-primary">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${event.recurring ? `
+                                <div class="mb-2">
+                                    <label class="block text-xs font-medium text-themed-primary mb-1">End Date (for recurring events)</label>
+                                    <input type="date" id="endDate-${index}" value="${eventEndDate}" class="w-full sm:w-48 px-2 py-1 border-themed border rounded text-sm bg-themed-secondary text-themed-primary">
+                                </div>
+                            ` : ''}
+                            
+                            <div class="text-sm text-themed-secondary">
+                                ${event.location ? `📍 <input type="text" id="location-${index}" value="${event.location}" placeholder="Location" class="inline bg-transparent border-none text-sm text-themed-secondary p-0 focus:outline-none focus:bg-themed-secondary focus:border focus:border-themed focus:rounded focus:px-1">` : `📍 <input type="text" id="location-${index}" placeholder="Add location" class="inline bg-transparent border-none text-sm text-themed-tertiary p-0 focus:outline-none focus:bg-themed-secondary focus:border focus:border-themed focus:rounded focus:px-1">`}
+                            </div>
+                            
+                            ${validationText || recurringText ? `
+                            <div class="flex items-center space-x-2 mt-2">
+                                ${recurringText}
+                                ${validationText}
+                            </div>
+                            ` : ''}
+                            
+                            ${event.description ? `<p class="text-sm text-themed-secondary mt-2">${event.description}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                eventsContainer.appendChild(eventDiv);
+            });
+            
+            // Add select all/none buttons
+            const selectAllDiv = document.createElement('div');
+            selectAllDiv.className = 'mt-4 pt-4 border-t border-themed text-center';
+            selectAllDiv.innerHTML = `
+                <button id="select-all-events" class="text-sm text-blue-600 hover:text-blue-800 mr-4 px-3 py-1 border border-blue-300 rounded hover:bg-blue-50">Select All</button>
+                <button id="select-none-events" class="text-sm text-themed-secondary hover:text-themed-primary px-3 py-1 border border-themed rounded hover:bg-themed-tertiary">Select None</button>
+            `;
+            eventsContainer.appendChild(selectAllDiv);
+            
+            // Add event listeners for select all/none - with proper timing
+            setTimeout(() => {
+                const selectAllBtn = document.getElementById('select-all-events');
+                const selectNoneBtn = document.getElementById('select-none-events');
+                
+                if (selectAllBtn) {
+                    selectAllBtn.addEventListener('click', () => {
+                        document.querySelectorAll('#events-container input[type="checkbox"]').forEach(cb => cb.checked = true);
+                    });
+                }
+                
+                if (selectNoneBtn) {
+                    selectNoneBtn.addEventListener('click', () => {
+                        document.querySelectorAll('#events-container input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    });
+                }
+            }, 100);
+        }
+
+        function getDefaultDate() {
+            const quarter = document.getElementById('default-quarter')?.value || 'spring2025';
+            const today = new Date();
+            
+            switch(quarter) {
+                case 'winter2025':
+                    return today < new Date('2025-01-15') ? '2025-01-15' : today.toISOString().split('T')[0];
+                case 'spring2025':
+                    return today < new Date('2025-04-01') ? '2025-04-01' : today.toISOString().split('T')[0];
+                case 'summer2025':
+                    return today < new Date('2025-07-01') ? '2025-07-01' : today.toISOString().split('T')[0];
+                case 'fall2025':
+                    return today < new Date('2025-10-01') ? '2025-10-01' : today.toISOString().split('T')[0];
+                case 'winter2026':
+                    return today < new Date('2026-01-15') ? '2026-01-15' : today.toISOString().split('T')[0];
+                case 'spring2026':
+                    return today < new Date('2026-04-01') ? '2026-04-01' : today.toISOString().split('T')[0];
+                default:
+                    return today.toISOString().split('T')[0];
+            }
+        }
+
+        function getDefaultEndDate() {
+            const quarter = document.getElementById('default-quarter')?.value || 'spring2025';
+            
+            switch(quarter) {
+                case 'winter2025':
+                    return '2025-03-15';
+                case 'spring2025':
+                    return '2025-06-15';
+                case 'summer2025':
+                    return '2025-09-15';
+                case 'fall2025':
+                    return '2025-12-15';
+                case 'winter2026':
+                    return '2026-03-15';
+                case 'spring2026':
+                    return '2026-06-15';
+                default:
+                    return '2025-06-15';
+            }
+        }
+
+        async function handleAddToCalendar(type) {
             if (!latestEventDetails) {
                 calendarStatus.textContent = "No event details to add.";
                 return;
@@ -288,54 +715,152 @@
                 return;
             }
 
-            const { title, date, startTime, endTime, location, description } = latestEventDetails;
+            const events = latestEventDetails.events || [latestEventDetails];
+            let eventsToAdd = [];
 
-            if (!date || !startTime) {
-                calendarStatus.textContent = "AI could not determine date and time.";
+            if (type === 'all') {
+                eventsToAdd = events.map((event, index) => {
+                    return getEventDataFromInputs(event, index);
+                });
+            } else if (type === 'selected') {
+                // Get only checked events with their manually entered data
+                const checkboxes = document.querySelectorAll('#events-container input[type="checkbox"]');
+                events.forEach((event, index) => {
+                    if (checkboxes[index]?.checked) {
+                        eventsToAdd.push(getEventDataFromInputs(event, index));
+                    }
+                });
+            }
+
+            if (eventsToAdd.length === 0) {
+                calendarStatus.textContent = "No events selected to add.";
                 return;
             }
 
-            let startDate = new Date(`${date}T${startTime}`);
-            let endDate = endTime ? new Date(`${date}T${endTime}`) : new Date(startDate.getTime() + 60 * 60 * 1000);
+            calendarStatus.textContent = `Adding ${eventsToAdd.length} event(s)...`;
+            calendarLinks.innerHTML = '';
+            let successCount = 0;
+            let errorCount = 0;
+            let eventLinks = [];
 
-            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                calendarStatus.textContent = "AI provided an invalid date/time.";
-                return;
+            for (const eventData of eventsToAdd) {
+                try {
+                    const result = await addSingleEventToCalendar(eventData);
+                    successCount++;
+                    
+                    // Create calendar link
+                    if (result && result.id && result.htmlLink) {
+                        eventLinks.push({
+                            title: eventData.title,
+                            link: result.htmlLink,
+                            id: result.id
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error adding event:', error);
+                    errorCount++;
+                }
+            }
+
+            if (errorCount === 0) {
+                calendarStatus.innerHTML = `<span class="text-green-600">✅ Successfully added ${successCount} event(s) to your calendar!</span>`;
+            } else {
+                calendarStatus.innerHTML = `<span class="text-orange-600">⚠️ Added ${successCount} event(s), ${errorCount} failed. Check console for details.</span>`;
+            }
+
+            // Display calendar links
+            if (eventLinks.length > 0) {
+                const linksHTML = eventLinks.map(event => 
+                    `<a href="${event.link}" target="_blank" class="text-blue-600 hover:text-blue-800 underline block">
+                        📅 View "${event.title}" in Google Calendar
+                    </a>`
+                ).join('');
+                calendarLinks.innerHTML = `<div class="mt-3 p-3 bg-themed-tertiary rounded-lg border-themed border">
+                    <p class="text-sm font-medium text-themed-primary mb-2">Quick Access Links:</p>
+                    ${linksHTML}
+                </div>`;
+            }
+        }
+
+        function getEventDataFromInputs(originalEvent, index) {
+            // Get values from the input fields for this event
+            const startDateInput = document.getElementById(`startDate-${index}`);
+            const startTimeInput = document.getElementById(`startTime-${index}`);
+            const endTimeInput = document.getElementById(`endTime-${index}`);
+            const endDateInput = document.getElementById(`endDate-${index}`);
+            const locationInput = document.getElementById(`location-${index}`);
+            const colorSelect = document.getElementById(`color-${index}`);
+
+            return {
+                title: originalEvent.title || 'Untitled Event',
+                date: startDateInput?.value || getDefaultDate(),
+                startTime: startTimeInput?.value || '09:00',
+                endTime: endTimeInput?.value || '10:00',
+                endDate: endDateInput?.value || (originalEvent.recurring ? getDefaultEndDate() : null),
+                location: locationInput?.value || null,
+                description: originalEvent.description || null,
+                recurring: originalEvent.recurring || false,
+                colorId: colorSelect?.value || document.getElementById('default-color')?.value || '1'
+            };
+        }
+
+        async function addSingleEventToCalendar(eventData) {
+            const { title, date, startTime, endTime, location, description, recurring, endDate, colorId } = eventData;
+
+            // Use default date if not provided
+            const eventDate = date || getDefaultDate();
+            const eventEndDate = endDate || getDefaultEndDate();
+
+            if (!startTime) {
+                throw new Error(`Event "${title}" is missing start time`);
+            }
+
+            let startDate = new Date(`${eventDate}T${startTime}`);
+            let endEventDate = endTime ? new Date(`${eventDate}T${endTime}`) : new Date(startDate.getTime() + 60 * 60 * 1000);
+
+            if (isNaN(startDate.getTime()) || isNaN(endEventDate.getTime())) {
+                throw new Error(`Event "${title}" has invalid date/time`);
             }
 
             const event = {
                 'summary': title,
                 'location': location,
                 'description': description,
+                'colorId': colorId || '1',
                 'start': {
                     'dateTime': startDate.toISOString(),
                     'timeZone': Intl.DateTimeFormat().resolvedOptions().timeZone,
                 },
                 'end': {
-                    'dateTime': endDate.toISOString(),
+                    'dateTime': endEventDate.toISOString(),
                     'timeZone': Intl.DateTimeFormat().resolvedOptions().timeZone,
                 },
             };
 
-            try {
-                calendarStatus.textContent = "Adding event...";
+            // Add recurring rule if it's a recurring event
+            if (recurring && eventEndDate) {
+                const recurEndDate = new Date(eventEndDate);
+                if (!isNaN(recurEndDate.getTime())) {
+                    event.recurrence = [
+                        `RRULE:FREQ=WEEKLY;UNTIL=${recurEndDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`
+                    ];
+                }
+            }
+
+            return new Promise((resolve, reject) => {
                 const request = gapi.client.calendar.events.insert({
                     'calendarId': 'primary',
                     'resource': event,
                 });
 
-                request.execute(function(event) {
-                    calendarStatus.textContent = `Event created! View it here:`;
-                    const link = document.createElement('a');
-                    link.href = event.htmlLink;
-                    link.textContent = event.summary;
-                    link.target = "_blank";
-                    link.className = "text-blue-600 hover:underline ml-2";
-                    calendarStatus.appendChild(link);
+                request.execute((result) => {
+                    if (result.error) {
+                        reject(new Error(result.error.message));
+                    } else {
+                        resolve(result);
+                    }
                 });
-            } catch (err) {
-                calendarStatus.textContent = `Error: ${err.message}`;
-            }
+            });
         }
 
     </script>
