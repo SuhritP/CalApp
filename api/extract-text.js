@@ -20,26 +20,14 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'No image data provided' });
         }
 
-        // Try multiple environment variable names
+        // Use environment variable for API key
         const OPENAI_API_KEY = process.env.OPENAI_API_KEY || 
                                process.env.OPENAI_API_KEY_PROD || 
                                process.env.API_KEY_OPENAI;
         
-        // Debug logging (remove in production)
-        console.log('Environment check:', {
-            hasApiKey: !!OPENAI_API_KEY,
-            keyLength: OPENAI_API_KEY ? OPENAI_API_KEY.length : 0,
-            keyPrefix: OPENAI_API_KEY ? OPENAI_API_KEY.substring(0, 7) + '...' : 'none',
-            allEnvKeys: Object.keys(process.env).sort(),
-            vercelKeys: Object.keys(process.env).filter(k => k.includes('VERCEL')),
-            openaiKeys: Object.keys(process.env).filter(k => k.includes('OPENAI') || k.includes('API'))
-        });
-        
         if (!OPENAI_API_KEY) {
             return res.status(500).json({ 
-                error: 'OpenAI API key not configured',
-                debug: `Environment variables available: ${Object.keys(process.env).length}`,
-                allKeys: Object.keys(process.env).sort()
+                error: 'OpenAI API key not configured'
             });
         }
 
@@ -118,6 +106,6 @@ Look carefully at the visual hierarchy - course names are typically more promine
         res.status(200).json(eventDetails);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ error: 'Failed to extract event details from image', details: error.message });
+        res.status(500).json({ error: 'Failed to extract event details from image' });
     }
 } 
