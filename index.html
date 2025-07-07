@@ -354,9 +354,13 @@
         function handleImageUpload(e) {
             const file = e.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    imageData = event.target.result;
+                // Show compression status
+                statusDiv.classList.remove('hidden');
+                spinner.classList.remove('hidden');
+                statusText.textContent = 'Compressing image...';
+                
+                compressImage(file, (compressedImageData) => {
+                    imageData = compressedImageData;
                     imagePreview.src = imageData;
                     imagePreviewContainer.classList.remove('hidden');
                     extractBtn.disabled = false;
@@ -367,9 +371,52 @@
                     calendarLinks.innerHTML = '';
                     eventsContainer.innerHTML = '';
                     latestEventDetails = null;
-                }
-                reader.readAsDataURL(file);
+                    
+                    // Hide compression status
+                    statusDiv.classList.add('hidden');
+                    spinner.classList.add('hidden');
+                });
             }
+        }
+
+        function compressImage(file, callback) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                // Calculate new dimensions (max 1024x1024 to stay under serverless limits)
+                let { width, height } = img;
+                const maxDimension = 1024;
+                
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = (height * maxDimension) / width;
+                        width = maxDimension;
+                    } else {
+                        width = (width * maxDimension) / height;
+                        height = maxDimension;
+                    }
+                }
+                
+                // Set canvas dimensions
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw and compress
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to base64 with compression
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                callback(compressedDataUrl);
+            };
+            
+            // Read file as data URL
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         async function handleExtractClick() {
@@ -385,14 +432,32 @@
                 statusText.textContent = 'Analyzing image with AI Vision...';
                 latestEventDetails = await getEventDetailsFromAI(imageData);
                 
+                // Validate that we got proper event data
+                if (!latestEventDetails || (!latestEventDetails.events && !latestEventDetails.title)) {
+                    throw new Error('No events could be extracted from the image. Please try with a clearer image or different format.');
+                }
+                
                 displayEvents(latestEventDetails);
                 resultsDiv.classList.remove('hidden');
                 statusDiv.classList.add('hidden');
 
             } catch (error) {
                 console.error('Error:', error);
-                statusText.textContent = `An error occurred: ${error.message}`;
+                let errorMessage = 'An error occurred while analyzing the image.';
+                
+                if (error.message.includes('413')) {
+                    errorMessage = 'Image too large. Please try with a smaller image (under 2MB).';
+                } else if (error.message.includes('OpenAI API')) {
+                    errorMessage = 'AI service temporarily unavailable. Please try again in a moment.';
+                } else if (error.message.includes('SyntaxError')) {
+                    errorMessage = 'Server error processing image. Please try with a smaller image.';
+                } else {
+                    errorMessage = error.message;
+                }
+                
+                statusText.textContent = errorMessage;
                 spinner.classList.add('hidden');
+                latestEventDetails = null; // Ensure it's properly reset
             } finally {
                 extractBtn.disabled = false;
             }
@@ -701,15 +766,23 @@ Look carefully at the visual hierarchy - course names are typically more promine
 
         async function handleAddToCalendar(type) {
             if (!latestEventDetails) {
-                calendarStatus.textContent = "No event details to add.";
+                calendarStatus.innerHTML = '<span class="text-red-600">❌ No event details to add. Please extract events from an image first.</span>';
                 return;
             }
+            
             if (!gapi.client.getToken()) {
+                calendarStatus.innerHTML = '<span class="text-blue-600">🔐 Please sign in with Google first.</span>';
                 handleAuthClick(); // Prompt user to sign in if not already
                 return;
             }
 
-            const events = latestEventDetails.events || [latestEventDetails];
+            // Validate event data structure
+            const events = latestEventDetails.events || (latestEventDetails.title ? [latestEventDetails] : []);
+            if (events.length === 0) {
+                calendarStatus.innerHTML = '<span class="text-red-600">❌ No valid events found to add to calendar.</span>';
+                return;
+            }
+            
             let eventsToAdd = [];
 
             if (type === 'all') {
@@ -848,9 +921,16 @@ Look carefully at the visual hierarchy - course names are typically more promine
                 });
 
                 request.execute((result) => {
+                    if (!result) {
+                        reject(new Error('No response from Google Calendar API'));
+                        return;
+                    }
+                    
                     if (result.error) {
-                        reject(new Error(result.error.message));
+                        console.error('Google Calendar API error:', result.error);
+                        reject(new Error(result.error.message || 'Google Calendar API error'));
                     } else {
+                        console.log('Successfully created event:', result);
                         resolve(result);
                     }
                 });
